@@ -7,23 +7,19 @@ from tqdm import tqdm_notebook
 import tensorflow as tf
 from sklearn.cluster import DBSCAN
 
-def preX(names):
+def preX(names, dataFile='data'):
     X = np.zeros((len(names), 256, 512, 3))
     for i, name in enumerate(names):
-        img = Image.open(f'{dataFile}/new_rgb_output/{name}')
+        img = Image.open(f'{dataFile}/TrainData/Train/{name}')
         X[i] = np.array(img)[:,:,:3]/255
     return X
 
-def preY(names):
+def preY(names, dataFile='data'):
     Y = np.zeros((len(names), 256, 512))
     for i, name in enumerate(names):
-        img = Image.open(f'{dataFile}/new_sem_output/{name}')
-        y = np.array(img)[:,:,:3]
-        yb = np.ones((256,512))
-        yb[y[:,:,0] != 157] = 0
-        yb[y[:,:,1] != 234] = 0
-        yb[y[:,:,2] != 50] = 0
-        Y[i] = yb
+        img = Image.open(f'{dataFile}/MaskedData/Masked/{name}')
+        y = np.array(img)/255
+        Y[i] = y
     return Y
     
 def getNames(names, n):
