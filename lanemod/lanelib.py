@@ -22,9 +22,12 @@ def preY(names, dataFile='data'):
         Y[i] = y
     return Y
     
-def getNames(names, n):
-    random.shuffle(names)
-    return names[:n], names[n:]
+def getNames(names, n, preshuffle=True):
+    if preshuffle:
+        random.shuffle(names)
+        return names[:n], names[n:]
+    else:
+        return random.shuffle(names[:n]), names[n:]
     
     
 def WBCE(y_true, y_pred):
