@@ -53,7 +53,12 @@ def show_pred_image(X, Y_pred, Y):
     plt.show()
 
     
-def Train(model, img_names, valid_names=None, epochs=1, chunk_size=500, batch_size=5):
+    
+DEVICE = torch.device('cuda')
+learning_rate = 0.01
+optimizer = optim.Adam(Lane_model.parameters(), lr=learning_rate)
+
+def Train(model, img_names, valid_names=None, epochs=1, chunk_size=500, batch_size=5, optimizer=optimizer):
     num_chunks = len(img_names)//chunk_size
     if len(img_names)%chunk_size:
         num_chunks += 1
