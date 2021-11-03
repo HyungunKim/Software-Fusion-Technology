@@ -6,6 +6,7 @@ import random
 from tqdm import tqdm_notebook
 import torch
 from sklearn.cluster import DBSCAN
+from tqdm import notebook
 
 def preX(names, dataFile='data'):
     X = np.zeros((len(names), 256, 512, 3))
