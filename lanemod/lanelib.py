@@ -13,6 +13,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+from torch.utils.data import Dataset
+from torchvision import datasets
+from torchvision.io import read_image
+
 DEVICE = torch.device('cuda')
 
 def preX(names, dataFile='data'):
@@ -58,79 +62,86 @@ def show_pred_image(X, Y_pred, Y):
     plt.show()
 
     
-    
-DEVICE = torch.device('cuda')
+class LaneDataset(Dataset):
+    def __init__(self, names, train_dir, masked_dir, batch_size = 4, DEVICE = torch.device('cuda')):
+        self.names = names
+        self.dataset_size = len(self.names)
+        self.train_dir = train_dir
+        self.masked_dir = masked_dir
+        self.batch_size = batch_size
+        self.DEVICE = DEVICE
 
+        self.train_names = []
+        self.masked_names = []
+        for i in range(self.dataset_size):
+            train_data = train_dir + names[i]
+            mask_data = masked_dir + names[i]
+            self.train_names.append(train_data)
+            self.masked_names.append(mask_data)
+        
+    def __len__(self):
+        return int(np.floor(self.dataset_size) / self.batch_size)
 
-def Train(model, img_names, valid_names=None, epochs=1, chunk_size=500, batch_size=5, optimizer=None):
-    if optimizer is None:
-        learning_rate = 0.01
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
-    num_chunks = len(img_names)//chunk_size
-    if len(img_names)%chunk_size:
-        num_chunks += 1
-    
-    total_batch_num = len(img_names)//batch_size + len(img_names)%batch_size
+    def __getitem__(self, idx):
+        train_list = self.train_names[idx * self.batch_size: (idx+1) * self.batch_size]
+        masked_list = self.masked_names[idx * self.batch_size: (idx+1) * self.batch_size]
 
-    if valid_names is not None:
-        num_chunks_val = len(valid_names)//chunk_size
-        if len(valid_names)%chunk_size:
-            num_chunks_val += 1
+        for idx, path in enumerate(zip(train_list, masked_list)):
+            train_path, masked_path = path
+            if idx == 0:
+                train_image = read_image(train_path)
+                train_image = torch.unsqueeze(train_image, 0)
+
+                masked_image = read_image(masked_path)
+                masked_image = torch.unsqueeze(masked_image, 0)
+            else:
+                train_temp = read_image(train_path)
+                train_temp = torch.unsqueeze(train_temp, 0)
+                train_image = torch.cat((train_image, train_temp), 0)
+
+                masked_temp = read_image(masked_path)
+                masked_temp = torch.unsqueeze(masked_temp, 0)
+                masked_image = torch.cat((masked_image, masked_temp), 0)
+        
+        train_image = (train_image/255.).to(DEVICE)
+        masked_image = (masked_image/255.).to(DEVICE)
+        sample = {"train": train_image, "masked": masked_image}
+        return sample
     
-    model.train(True)
+    
+def Train(model, img_names, valid_names=None, epochs=1):
+    print('######### Train Start #########')
     for e in range(epochs):
-        print(f'##### Epoch {e}/{epochs} Train Start #####')
-        for chunk in notebook.tqdm(range(num_chunks)):
-            names = img_names[chunk_size*chunk: chunk_size*(chunk+1)]
-            X_chunk = preX(names)
-            Y_chunk = preY(names)
+        print(f'######### Epoch {e + 1}/{epochs} Train Start #########')
+        for idx in notebook.tqdm(range(len(train_loader))):
+            sample = next(iter(train_loader))
+            train, masked = sample['train'], sample['masked']
+            if idx == 0:
+                Y_pred = model(train)
+                loss = WBCE(masked, Y_pred)
 
-            num_batchs = chunk_size//batch_size
-            if chunk_size%batch_size:
-                num_batchs += 1
-            
-            for batch in notebook.tqdm(range(num_batchs)):
-                X = X_chunk[batch_size*batch: batch_size*(batch + 1)].to(DEVICE)
-                Y = Y_chunk[batch_size*batch: batch_size*(batch + 1)].to(DEVICE)
+            optimizer.zero_grad()
+            Y_pred = model(train)
+            loss = WBCE(masked, Y_pred)
+            loss.backward()
+            optimizer.step()
 
-                optimizer.zero_grad()
-                Y_pred = model(X)
-                loss = WBCE(Y, Y_pred)
-                loss.backward()
-                optimizer.step()
-                print('\r', f'[Train] Current Epoch : {e + 1}/{epochs}, Current Batch : {chunk*num_batchs+batch+1}/{total_batch_num}, WBCE : {loss.cpu()}', end = '')
-                if (chunk*num_batchs+batch+1) % (total_batch_num//20) == 0:
-                    print()
-                
-                break
-            break
-
-        # Validation
+            print('\r', f'[Train] Epoch : {e + 1}/{epochs},\tBatch : {idx+1}/{len(train_loader)},\tWBCE : {loss.item()}', end = '')
+            if (idx+1)%(len(train_loader)//10) == 0:
+                print()
+        
+        print(f'######### Epoch {e + 1}/{epochs} Valid Start #########')            
         with torch.no_grad():
-            if valid_names is not None:
-                print(f"##### Epoch {e}/{epochs} Validation Start #####")
-                val = []
-                for chunk_val in notebook.tqdm(range(num_chunks_val)):
-                    names = valid_names[batch_size*chunk_val: batch_size*(chunk_val + 1)]
-                    X_chunk = preX(names)
-                    Y_chunk = preY(names)
+            val = []
+            for idx in notebook.tqdm(range(len(valid_loader))):
+                sample = next(iter(valid_loader))
+                train, masked = sample['train'], sample['masked']
 
-                    num_batchs = chunk_size//batch_size
-                    if chunk_size%batch_size:
-                        num_batchs += 1
-
-                    for batch in notebook.tqdm(range(num_batchs)):
-                        X = X_chunk[chunk_size*batch: chunk_size*(batch + 1)].to(DEVICE)
-                        Y = Y_chunk[chunk_size*batch: chunk_size*(batch + 1)].to(DEVICE)
-                    
-                        Y_pred = model(X)
-                        loss = WBCE(Y, Y_pred)
-                        val.append(loss.item())
-                        
-                    
-                print(f'[Validation] Current Epoch : {e}/{epochs}, WBCE : {sum(val)/len(val)}')
-                show_pred_image(X[0],Y_pred[0], Y[0])
+                Y_pred = model(train)
+                loss = WBCE(masked, Y_pred)
+                val.append(loss.item())
+                print('\r', f'[Valid] Epoch : {e + 1}/{epochs},\tBatch : {idx+1}/{len(valid_loader)},\tWBCE : {loss.item()}', end = '')
+            print()
     
     
     
