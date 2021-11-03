@@ -4,9 +4,14 @@ import matplotlib.pyplot as plt
 import PIL.Image as Image
 import random
 from tqdm import tqdm_notebook
-import torch
 from sklearn.cluster import DBSCAN
 from tqdm import notebook
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
 
 DEVICE = torch.device('cuda')
 
