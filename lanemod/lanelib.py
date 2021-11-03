@@ -121,8 +121,8 @@ def Train(model, img_names, valid_names=None, epochs=1, chunk_size=500, batch_si
                         num_batchs += 1
 
                     for batch in notebook.tqdm(range(num_batchs)):
-                        X = X_chunk[batch_size*batch: batch_size*(batch + 1)].to(DEVICE)
-                        Y = Y_chunk[batch_size*batch: batch_size*(batch + 1)].to(DEVICE)
+                        X = X_chunk[chunk_size*batch: chunk_size*(batch + 1)].to(DEVICE)
+                        Y = Y_chunk[chunk_size*batch: chunk_size*(batch + 1)].to(DEVICE)
                     
                         Y_pred = model(X)
                         loss = WBCE(Y, Y_pred)
