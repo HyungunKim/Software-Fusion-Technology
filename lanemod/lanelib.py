@@ -8,6 +8,8 @@ import torch
 from sklearn.cluster import DBSCAN
 from tqdm import notebook
 
+DEVICE = torch.device('cuda')
+
 def preX(names, dataFile='data'):
     X = np.zeros((len(names), 256, 512, 3))
     for i, name in enumerate(names):
