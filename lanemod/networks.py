@@ -247,3 +247,11 @@ class LaneNetSmall(keras.Model):
         d2o = self.d2(d1o, training=training) 
 
         return tf.math.sigmoid(d2o)
+
+def get_saved_net(path=None):
+    if path is None:
+        path = os.path.dirname(os.path.realpath(__file__)) + "/saved_bin/"
+    model = LaneNetSmall()
+    print("loading model from ", path)
+    model.load_weight(path)
+    return model
