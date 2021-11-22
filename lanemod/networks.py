@@ -226,3 +226,24 @@ class LaneNet(keras.Model):
         a5o = self.a5(a4o, d1o, training=training)
 
         return tf.math.sigmoid(d2o + a5o)
+    
+class LaneNetSmall(keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.e1 = Encoder(3, 32)
+        self.e2 = Encoder(32, 64)
+        self.r1 = Residual(64, 128)
+        self.r2 = Residual(64, 128)
+        self.d1 = Decoder(64, 32)
+        self.d2 = Decoder(32, 1)
+
+
+    def call(self, input_tensor, *args, training=True, **kwargs):
+        e1o = self.e1(input_tensor, training=training) 
+        e2o = self.e2(e1o, training=training) 
+        r1o = self.r1(e2o, training=training) 
+        r2o = self.r2(r1o, training=training) 
+        d1o = self.d1(r2o, training=training) 
+        d2o = self.d2(d1o, training=training) 
+
+        return tf.math.sigmoid(d2o)
