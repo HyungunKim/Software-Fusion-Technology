@@ -254,5 +254,5 @@ def get_saved_net(path=None):
         path = os.path.dirname(os.path.realpath(__file__)) + "/saved_bin/"
     model = LaneNetSmall()
     print("loading model from ", path)
-    model.load_weight(path)
+    model.load_weights(path)
     return model
